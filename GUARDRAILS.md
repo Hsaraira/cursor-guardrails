@@ -18,6 +18,9 @@ You are setting up a reusable project guardrail framework. Follow these steps ex
 4. **Does the project handle any of these?** Auth, secrets, database writes, payments, file uploads, user data, external APIs
    - If yes to any → create `security-policy.mdc`
    - If no to all → skip it
+5. **Are Cursor Cloud Agents enabled?** (Settings → Cloud Agents)
+   - If yes → the quality gate will automatically spawn background review agents
+   - If no → the quality gate will prompt the user to open review chats manually
 
 ### Step 2 — Create Tier 1 files (always, every project)
 
@@ -134,6 +137,8 @@ alwaysApply: true
 
 ### `.cursor/rules/quality-gate.mdc`
 
+Replace `{{CLOUD_AGENTS_ENABLED}}` with `true` or `false` based on Step 1, question 5.
+
 ```
 ---
 description: Quality gate after every code change. No exceptions.
@@ -143,6 +148,8 @@ alwaysApply: true
 # Quality Gate
 
 Runs after EVERY code change — new file, modified file, bug fix. Automatic. No asking.
+
+Cloud Agents: {{CLOUD_AGENTS_ENABLED}}
 
 ## Step 1 — Lint
 
@@ -184,7 +191,7 @@ Every milestone. Not at end of session.
 
 ## Step 5 — Review checkpoint (AUTOMATIC)
 
-After completing a feature, phase, or sensitive change, you MUST prompt the user to run the appropriate review agent. Do not skip this. Do not wait to be asked.
+After completing a feature, phase, or sensitive change, you MUST trigger the appropriate review. Do not skip this. Do not wait to be asked.
 
 Determine the review level from this table:
 
@@ -196,22 +203,51 @@ Determine the review level from this table:
 | Sensitive (auth, payments, DB writes, secrets, user data) | Reviewer → Security → QA |
 | Pre-production / pre-launch | Reviewer → Security → QA |
 
-When review is needed, tell the user:
+### If Cloud Agents = true
 
-1. **Which agent(s)** to run and why
-2. **Paste the ready-to-use prompt** from `.cursor/prompts/{agent}.md` so they can copy it directly
-3. **What to tell the agent** — which files/features to review
-4. **Wait for the review** before starting the next task
+Spawn review agents automatically as background agents. The user does nothing manually.
 
-Example output when a feature is done:
+For each required review agent:
+1. Read the prompt from `.cursor/prompts/{agent}.md`
+2. Spawn a background agent (Task tool, `run_in_background: true`) with:
+   - The full agent prompt as context
+   - The list of files changed and what the feature does
+   - Instruction to read `docs/ARCHITECTURE.md` and `docs/STATUS.md` for project context
+   - Instruction to return findings in the format specified by the prompt
+3. When the background agent finishes, read its output
+4. Report findings to the user
+5. Fix any required issues before moving to the next task
 
-> **Review checkpoint:** This feature added new functionality. Open a new Cursor chat and paste the Reviewer prompt below, then tell it to review [specific files/feature].
+Run review agents in sequence when multiple are needed — each should see prior findings.
+
+Flow for a sensitive feature:
+```
+Builder completes feature
+  → spawn Reviewer (background) → read findings → fix
+    → spawn Security (background) → read findings → fix
+      → spawn QA (background) → read findings → fix
+        → all clear → move on
+```
+
+### If Cloud Agents = false
+
+Prompt the user to open a new Cursor chat manually:
+
+1. State **which agent(s)** to run and why
+2. **Paste the full prompt** from `.cursor/prompts/{agent}.md` so they can copy it directly into the new chat
+3. Tell them **what to say to the agent** — which files/features to review
+4. **Wait for the review results** before starting the next task
+
+Example message to the user:
+
+> **Review checkpoint:** This feature added new functionality.
+> Open a new Cursor chat and paste this prompt:
 >
 > (paste the full reviewer prompt here)
 >
-> Once the Reviewer returns findings, come back here and I'll address any required fixes before we move on.
-
-If the change is sensitive, repeat for Security and QA in sequence.
+> Then tell it: "Review the changes in [files] for [feature name]."
+>
+> Come back here with the findings and I'll fix any required issues before we move on.
 
 ## If any step fails
 
