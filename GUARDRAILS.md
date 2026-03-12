@@ -34,7 +34,7 @@ Create these 7 files using the exact templates below. Replace `{{PROJECT_NAME}}`
 
 ### Step 4 — Create agent prompts (always)
 
-Create `.cursor/prompts/` with all 4 agent prompts. The Builder agent spawns Reviewer, Security, and QA as background Cloud Agents automatically at the right checkpoints.
+Create `.cursor/prompts/` with all 4 files below: 1 builder reference doc + 3 review agent prompts (Reviewer, Security, QA). The Builder agent spawns the 3 review agents as background Cloud Agents automatically at the right checkpoints.
 
 ### Step 5 — Report what was created
 
@@ -109,6 +109,8 @@ alwaysApply: true
 
 ## Git discipline (AUTOMATIC — not when asked)
 
+- If the project doesn't have a git repo yet, run `git init` before the first commit.
+- If no remote exists, create one (e.g., `gh repo create PROJECT_NAME --public --source=. --push`) or ask the user.
 - Commit after EVERY meaningful change. Not at end of session. Every time.
 - Push after EVERY commit.
 - Never batch unrelated changes into one commit.
@@ -160,7 +162,9 @@ Run `ReadLints` on every file you wrote or modified. Fix every error you introdu
 - Verify imports: `python -c "from module import Class"`
 
 ### TypeScript / Next.js
+- Test-first: write tests BEFORE implementation (same as Python — this is universal)
 - `npx tsc --noEmit` → must exit 0
+- Run test suite if one exists (e.g., `npm test`, `npx vitest`, `npx jest`) → ALL green
 - Dev server running + page loads + interactive elements work
 - No white screens, no console errors
 
@@ -209,7 +213,9 @@ For each required review agent:
    - Instruction to return findings in the format specified by the prompt
 3. When the agent finishes, read its output
 4. Report findings to the user
-5. Fix any required issues before moving to the next task
+5. Fix any required issues
+6. If findings were critical or moderate, re-run the same review agent to verify fixes are adequate
+7. Only move to the next review agent (or next task) after the current one returns APPROVE / SAFE TO SHIP / SHIP
 
 When multiple agents are needed, run them in sequence — each should see prior findings.
 
