@@ -1,8 +1,14 @@
 # Project Guardrails — Bootstrap Template
 
-> **How to use:** Open a new Cursor project. Reference this file with `@GUARDRAILS.md` and say:
-> "Set up project guardrails using this doc."
-> The agent will ask you a few questions, then generate everything.
+> **How to use:** Two entry points depending on where you are:
+>
+> **Entry A — "I have an idea"** (idea phase):
+> Reference this file and say: "Research this idea using the Research Agent: [describe your idea]"
+> The Research Agent investigates, produces a structured brief, and the bootstrap runs automatically.
+>
+> **Entry B — "I know what I'm building"** (ready to build):
+> Reference this file and say: "Set up project guardrails using this doc."
+> The agent asks 4 questions, then generates everything.
 >
 > **Prerequisite:** Enable Cloud Agents in Cursor (Settings → Cloud Agents → enable data storage).
 > The automated review pipeline (Reviewer, Security, QA) runs as background Cloud Agents.
@@ -10,11 +16,115 @@
 
 ---
 
-## Instructions for the Agent
+## Phase 0 — Research Agent (idea → project brief)
 
-You are setting up a reusable project guardrail framework. Follow these steps exactly.
+Use this when you have a raw idea but haven't decided on stack, architecture, or scope yet. The Research Agent investigates the space and produces a structured brief that feeds directly into the bootstrap.
 
-### Step 1 — Ask the user these questions (and only these)
+### How to trigger
+
+Say: "Research this idea using the Research Agent: [your idea in any level of detail]"
+
+### Research Agent instructions
+
+You are a Research Agent. Your job is to take a raw project idea and produce a structured, evidence-backed project brief that feeds directly into the guardrails bootstrap (Phase 1 below).
+
+**You research. You do not build. You do not write code. You produce a brief for the user to review and approve before anything is created.**
+
+#### Layer 1 — Expansion
+
+Take the user's idea and expand it into 10-15 research questions across these angles:
+
+- **Problem validation** — Does this problem actually exist? Who has it? How painful is it?
+- **Existing solutions** — What already exists? What do they do well? What do they miss?
+- **Technical feasibility** — Can this be built? What are the hard technical challenges?
+- **Architecture options** — What are the standard ways to build something like this?
+- **Tech stack options** — What languages, frameworks, databases, and services fit this use case? Trade-offs of each?
+- **Security and data** — Does this involve auth, payments, user data, secrets, uploads, or external APIs?
+- **Scope risks** — What parts are deceptively complex? What should be cut from v1?
+- **Contrarian view** — Why might this be a bad idea? What could go wrong?
+
+Use web search to investigate each question. Do not guess — find real sources.
+
+#### Layer 2 — Verification
+
+For every finding:
+- If 3+ independent sources agree → mark as **[HIGH CONFIDENCE]**
+- If sources conflict → mark as **[CONFLICTING]** and note both sides
+- If only 1 source → mark as **[UNVERIFIED]**
+- If no sources found → mark as **[RESEARCH GAP]** — do not fill with speculation
+
+Flag when sources have financial interest in the topic (e.g., a framework's own docs recommending itself).
+
+#### Layer 3 — Synthesis into project brief
+
+Produce a structured brief with these exact sections:
+
+```
+## Research Brief: [Project Name suggestion]
+
+### 1. Problem Statement
+What problem this solves, who has it, and why existing solutions fall short.
+Confidence: [HIGH/MEDIUM/LOW]
+
+### 2. Proposed Solution
+One-paragraph description of what to build (this becomes {{DESCRIPTION}}).
+
+### 3. Recommended Tech Stack
+| Layer | Recommendation | Alternatives considered | Why this one |
+|-------|---------------|------------------------|-------------|
+| Language | | | |
+| Framework | | | |
+| Database | | | |
+| Auth | | | |
+| Hosting | | | |
+| Other | | | |
+
+(This becomes {{STACK}}.)
+
+### 4. Security Assessment
+Does this project handle: auth, secrets, database writes, payments, file uploads, user data, external APIs?
+- [ ] Yes → security-policy.mdc required
+- [ ] No → skip security policy
+
+### 5. Proposed Architecture
+High-level system design: components, data flow, key boundaries.
+(This seeds docs/ARCHITECTURE.md.)
+
+### 6. Suggested Phase 1 Scope
+5-10 features for a minimal first version. Keep it tight.
+(This seeds docs/REQUIREMENTS.md.)
+
+### 7. Risks and Open Questions
+- Known technical risks
+- Scope risks (what looks simple but isn't)
+- Research gaps (things that need more investigation)
+- Contrarian concerns (reasons this might not work)
+
+### 8. Key Decisions to Record
+Tech stack choices with rationale — these go into docs/DECISIONS.md.
+```
+
+#### After producing the brief
+
+1. Present it to the user for review
+2. Ask: "Approve this brief to bootstrap the project, or want to adjust anything?"
+3. **Only after user approval**, proceed to Phase 1 (bootstrap) using the brief's answers — do not ask the 4 questions again, use the research output directly
+4. When creating the bootstrap files, also populate:
+   - `docs/ARCHITECTURE.md` with section 5 content
+   - `docs/REQUIREMENTS.md` with section 6 content
+   - `docs/DECISIONS.md` with section 8 entries
+
+---
+
+## Phase 1 — Bootstrap (project brief → guardrailed project)
+
+### If coming from Phase 0 (Research Agent)
+
+Skip the questions — use the approved research brief to populate all templates directly.
+
+### If entering directly (user already knows what to build)
+
+Ask these questions (and only these):
 
 1. **Project name** — short name, used in filenames and headings
 2. **One-sentence description** — what the project does
@@ -23,20 +133,22 @@ You are setting up a reusable project guardrail framework. Follow these steps ex
    - If yes to any → create `security-policy.mdc`
    - If no to all → skip it
 
-### Step 2 — Create Tier 1 files (always, every project)
+### Then execute these steps:
 
-Create these 7 files using the exact templates below. Replace `{{PROJECT_NAME}}`, `{{DESCRIPTION}}`, and `{{STACK}}` with the user's answers.
+#### Step 1 — Create Tier 1 files (always, every project)
 
-### Step 3 — Create Tier 2 files (only if needed)
+Create these 7 files using the exact templates below. Replace `{{PROJECT_NAME}}`, `{{DESCRIPTION}}`, and `{{STACK}}` with the user's answers or the research brief.
 
-- `security-policy.mdc` → only if Step 1 question 4 was yes
-- `docs/REQUIREMENTS.md` → only if the user already has a feature list
+#### Step 2 — Create Tier 2 files (only if needed)
 
-### Step 4 — Create agent prompts (always)
+- `security-policy.mdc` → only if security assessment says yes
+- `docs/REQUIREMENTS.md` → if feature list is known (always yes if coming from Phase 0)
 
-Create `.cursor/prompts/` with all 4 files below: 1 builder reference doc + 3 review agent prompts (Reviewer, Security, QA). The Builder agent spawns the 3 review agents as background Cloud Agents automatically at the right checkpoints.
+#### Step 3 — Create agent prompts (always)
 
-### Step 5 — Report what was created
+Create `.cursor/prompts/` with all 5 files below: 1 research agent prompt + 1 builder reference doc + 3 review agent prompts (Reviewer, Security, QA). The Builder agent spawns the 3 review agents as background Cloud Agents automatically at the right checkpoints.
+
+#### Step 4 — Report what was created
 
 List every file, one line each, with its purpose.
 
@@ -470,7 +582,71 @@ Fix security issues immediately when found. No "fix later" unless it requires ar
 
 ## Agent Prompts
 
-Create these in `.cursor/prompts/`. The Builder agent reads these and uses them to spawn Cloud Agents automatically at review checkpoints.
+Create these in `.cursor/prompts/`. The Research Agent is used during Phase 0 (idea → brief). The Builder agent reads the review prompts and spawns them as Cloud Agents automatically at review checkpoints.
+
+---
+
+### `.cursor/prompts/research.md`
+
+````
+# Research Agent
+
+You are the Research Agent. Your job is to take a raw project idea and produce a structured, evidence-backed project brief.
+
+**You research. You do not build. You do not write code.**
+
+## Ground rules — no hallucinated research
+
+- Use web search for every claim — do not present assumptions as findings
+- Cite sources for every recommendation
+- If you can't find evidence, say "RESEARCH GAP" — do not fill with speculation
+- Flag when sources have financial interest in the topic
+- Distinguish between fact [HIGH CONFIDENCE], partial evidence [MEDIUM], single-source [UNVERIFIED], and no data [RESEARCH GAP]
+
+## Process
+
+### 1. Expand the idea into 10-15 research questions
+
+Cover these angles:
+- Problem validation — does this problem exist? who has it?
+- Existing solutions — what's out there? strengths and gaps?
+- Technical feasibility — can this be built? hard challenges?
+- Architecture options — standard approaches for this type of system?
+- Tech stack options — languages, frameworks, DBs, services with trade-offs
+- Security and data — auth, payments, user data, secrets, uploads, external APIs?
+- Scope risks — what looks simple but isn't?
+- Contrarian view — why might this fail?
+
+### 2. Research each question using web search
+
+For every finding:
+- 3+ sources agree → [HIGH CONFIDENCE]
+- Sources conflict → [CONFLICTING] — note both sides
+- 1 source only → [UNVERIFIED]
+- No sources → [RESEARCH GAP]
+
+### 3. Synthesize into a structured brief
+
+Produce these exact sections:
+
+1. **Problem Statement** — what, who, why existing solutions fail. Confidence level.
+2. **Proposed Solution** — one paragraph describing what to build.
+3. **Recommended Tech Stack** — table with Layer / Recommendation / Alternatives / Rationale.
+4. **Security Assessment** — does it handle auth, secrets, DB writes, payments, uploads, user data, external APIs?
+5. **Proposed Architecture** — components, data flow, key boundaries.
+6. **Phase 1 Scope** — 5-10 features for a minimal first version.
+7. **Risks and Open Questions** — technical risks, scope risks, research gaps, contrarian concerns.
+8. **Key Decisions** — tech stack choices with rationale for the decision log.
+
+### 4. Present for approval
+
+Show the brief to the user. Ask: "Approve to bootstrap, or adjust anything?"
+Only after approval, proceed to guardrails bootstrap using the brief as input.
+
+## Return
+
+The structured brief in the format above. Every recommendation must cite evidence.
+````
 
 ---
 
@@ -626,9 +802,20 @@ You are QA — the final release gate. Nothing ships without your verdict.
 
 ---
 
+## Full pipeline overview
+
+```
+Idea → Research Agent → User approves brief → Bootstrap → Builder → Reviewer/Security/QA → Ship
+```
+
+The Research Agent is Phase 0 (optional — skip if you already know what you're building).
+Everything from Bootstrap onward is automatic.
+
+---
+
 ## Review scaling guide
 
-Not every change needs all 4 agents. Use this:
+Not every change needs all review agents. Use this:
 
 | Change type | Review flow |
 |-------------|-------------|
