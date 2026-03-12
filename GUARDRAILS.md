@@ -3,6 +3,10 @@
 > **How to use:** Open a new Cursor project. Reference this file with `@GUARDRAILS.md` and say:
 > "Set up project guardrails using this doc."
 > The agent will ask you a few questions, then generate everything.
+>
+> **Prerequisite:** Enable Cloud Agents in Cursor (Settings → Cloud Agents → enable data storage).
+> The automated review pipeline (Reviewer, Security, QA) runs as background Cloud Agents.
+> Without this enabled, the review agents cannot be spawned automatically.
 
 ---
 
@@ -21,13 +25,12 @@ You are setting up a reusable project guardrail framework. Follow these steps ex
 
 ### Step 2 — Create Tier 1 files (always, every project)
 
-Create these 6 files using the exact templates below. Replace `{{PROJECT_NAME}}`, `{{DESCRIPTION}}`, and `{{STACK}}` with the user's answers.
+Create these 7 files using the exact templates below. Replace `{{PROJECT_NAME}}`, `{{DESCRIPTION}}`, and `{{STACK}}` with the user's answers.
 
 ### Step 3 — Create Tier 2 files (only if needed)
 
 - `security-policy.mdc` → only if Step 1 question 4 was yes
 - `docs/REQUIREMENTS.md` → only if the user already has a feature list
-- `docs/DECISIONS.md` → always create (lightweight, no cost to have it)
 
 ### Step 4 — Create agent prompts (always)
 
@@ -67,6 +70,7 @@ alwaysApply: true
 - `docs/ARCHITECTURE.md` — system design and data flow
 - `docs/DECISIONS.md` — why we chose what we chose
 - `.cursor/rules/` — agent behavior rules
+- `.cursor/prompts/` — review agent prompts (Reviewer, Security, QA) used by Cloud Agents
 
 ## Architecture summary
 
@@ -134,7 +138,7 @@ alwaysApply: true
 
 ### `.cursor/rules/quality-gate.mdc`
 
-```
+````
 ---
 description: Quality gate after every code change. No exceptions.
 alwaysApply: true
@@ -220,7 +224,7 @@ Builder completes feature
 ## If any step fails
 
 Stop. Fix it. Do not proceed. Do not commit with a known failure.
-```
+````
 
 ---
 
@@ -344,11 +348,7 @@ See `docs/DECISIONS.md` for rationale on all architecture choices.
 
 ---
 
-## Tier 2 File Templates
-
----
-
-### `docs/DECISIONS.md` (always create)
+### `docs/DECISIONS.md`
 
 ```
 # {{PROJECT_NAME}} — Decision Log
@@ -369,6 +369,10 @@ Record architecture and design decisions here. Never leave rationale only in cha
 
 (No decisions recorded yet.)
 ```
+
+---
+
+## Tier 2 File Templates
 
 ---
 
@@ -451,12 +455,16 @@ Create these in `.cursor/prompts/`. The Builder agent reads these and uses them 
 
 ---
 
-### `.cursor/prompts/builder.md`
+### `.cursor/prompts/builder-reference.md`
+
+This is a **reference doc**, not a Cloud Agent prompt. The Builder is the main working chat — its behavior is enforced by the rule files in `.cursor/rules/`. This file exists so the user can review what the Builder is expected to do, or paste it into a new chat if starting fresh.
 
 ```
-# Builder Agent
+# Builder Agent — Reference
 
 You are the Builder. Your role is to implement work in small, correct, maintainable increments.
+
+Your behavior is governed by the rules in `.cursor/rules/` (session-protocol, quality-gate, no-shortcuts). This reference summarizes the expectations.
 
 ## Before coding
 
@@ -470,6 +478,7 @@ You are the Builder. Your role is to implement work in small, correct, maintaina
 - Test-first: write tests before implementation
 - No placeholders, no fake implementations, no "simplified versions"
 - Run the quality gate after every change (lint → validate → architecture check → commit → push)
+- At review checkpoints, spawn Reviewer / Security / QA as Cloud Agents automatically
 - If a task is too broad, split it before implementing
 - If architecture needs to change, update docs first
 
