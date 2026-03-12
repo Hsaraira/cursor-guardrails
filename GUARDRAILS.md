@@ -3,8 +3,9 @@
 > **How to use:** Two entry points depending on where you are:
 >
 > **Entry A — "I have an idea"** (idea phase):
-> Reference this file and say: "Research this idea using the Research Agent: [describe your idea]"
-> The Research Agent investigates, produces a structured brief, and the bootstrap runs automatically.
+> Reference this file and say: "I have an idea: [describe your idea]"
+> The agent generates a research prompt → you run it in Claude Research Mode (claude.ai) →
+> paste results back → agent structures a brief → you approve → project bootstraps automatically.
 >
 > **Entry B — "I know what I'm building"** (ready to build):
 > Reference this file and say: "Set up project guardrails using this doc."
@@ -16,100 +17,139 @@
 
 ---
 
-## Phase 0 — Research Agent (idea → project brief)
+## Phase 0 — Deep Research (idea → project brief)
 
-Use this when you have a raw idea but haven't decided on stack, architecture, or scope yet. The Research Agent investigates the space and produces a structured brief that feeds directly into the bootstrap.
+Use this when you have a raw idea but haven't decided on stack, architecture, or scope yet. This phase uses **Claude Research Mode** (on claude.ai) to do a thorough 5-45 minute deep investigation, then brings the results back into Cursor to bootstrap the project.
 
 ### How to trigger
 
-Say: "Research this idea using the Research Agent: [your idea in any level of detail]"
+Say: "I have an idea: [describe your idea]"
 
-### Research Agent instructions
+### What the agent does (Step 1 — Generate the research prompt)
 
-You are a Research Agent. Your job is to take a raw project idea and produce a structured, evidence-backed project brief that feeds directly into the guardrails bootstrap (Phase 1 below).
+When the user describes an idea, generate a tailored research prompt for Claude Research Mode. The prompt must follow this template, customized to the user's specific idea:
 
-**You research. You do not build. You do not write code. You produce a brief for the user to review and approve before anything is created.**
+````
+Research this project idea thoroughly. I need an evidence-backed project brief.
 
-#### Layer 1 — Expansion
+## The Idea
 
-Take the user's idea and expand it into 10-15 research questions across these angles:
+[INSERT THE USER'S IDEA DESCRIPTION HERE]
 
-- **Problem validation** — Does this problem actually exist? Who has it? How painful is it?
-- **Existing solutions** — What already exists? What do they do well? What do they miss?
-- **Technical feasibility** — Can this be built? What are the hard technical challenges?
-- **Architecture options** — What are the standard ways to build something like this?
-- **Tech stack options** — What languages, frameworks, databases, and services fit this use case? Trade-offs of each?
-- **Security and data** — Does this involve auth, payments, user data, secrets, uploads, or external APIs?
-- **Scope risks** — What parts are deceptively complex? What should be cut from v1?
-- **Contrarian view** — Why might this be a bad idea? What could go wrong?
+## What I Need You to Research
 
-Use web search to investigate each question. Do not guess — find real sources.
+Investigate each of these areas. Use real sources. Cite everything. Mark confidence levels on every finding: [HIGH CONFIDENCE] = 3+ independent sources agree, [CONFLICTING] = sources disagree, [UNVERIFIED] = single source, [RESEARCH GAP] = no data found.
 
-#### Layer 2 — Verification
+### 1. Problem Validation
+- Does this problem actually exist? Who has it? How painful is it?
+- What are people currently doing to solve it?
+- Are there forums, Reddit threads, or communities discussing this pain point?
 
-For every finding:
-- If 3+ independent sources agree → mark as **[HIGH CONFIDENCE]**
-- If sources conflict → mark as **[CONFLICTING]** and note both sides
-- If only 1 source → mark as **[UNVERIFIED]**
-- If no sources found → mark as **[RESEARCH GAP]** — do not fill with speculation
+### 2. Existing Solutions & Competitors
+- What tools, apps, or services already address this?
+- What do they do well? What do users complain about?
+- What gaps exist that a new solution could fill?
+- Pricing models of existing solutions?
 
-Flag when sources have financial interest in the topic (e.g., a framework's own docs recommending itself).
+### 3. Technical Feasibility
+- Can this be built? What are the hard technical challenges?
+- Are there open-source libraries, APIs, or services that make this easier?
+- What technical approaches have others used for similar problems?
 
-#### Layer 3 — Synthesis into project brief
+### 4. Tech Stack Recommendations
+- What languages, frameworks, and databases are best suited for this type of project?
+- Compare at least 2-3 options for each layer (frontend, backend, database, auth, hosting)
+- Include trade-offs: speed of development, scalability, community support, cost
+- Flag if any option's documentation is recommending itself (bias check)
 
-Produce a structured brief with these exact sections:
+### 5. Architecture Patterns
+- What are the standard architecture patterns for this type of system?
+- Monolith vs microservices vs serverless — which fits?
+- What does the data model look like at a high level?
+- What are the key system boundaries?
+
+### 6. Security & Data Considerations
+- Does this involve: authentication, payments, user data, secrets/API keys, file uploads, external APIs?
+- What are the security requirements for each?
+- Any regulatory considerations (GDPR, HIPAA, PCI, etc.)?
+
+### 7. Scope & Risk Assessment
+- What parts of this project are deceptively complex?
+- What should be in v1 vs cut for later?
+- What are the biggest risks (technical, market, scope)?
+- Contrarian take: why might this be a bad idea?
+
+## Output Format
+
+Structure your report with these exact sections:
+
+1. **Problem Statement** — what, who, why, with confidence level
+2. **Competitive Landscape** — existing solutions, gaps, opportunities
+3. **Recommended Tech Stack** — table format: Layer | Recommendation | Alternatives | Rationale
+4. **Proposed Architecture** — components, data flow, key boundaries
+5. **Security Assessment** — what sensitive data/operations are involved
+6. **Phase 1 Scope** — 5-10 features for a minimal first version
+7. **Risks & Open Questions** — technical, scope, market, contrarian concerns
+8. **Key Decisions** — major choices with rationale
+
+Be thorough. I'd rather wait 45 minutes for deep research than get a surface-level answer.
+````
+
+### What the agent does (Step 2 — Hand off to the user)
+
+After generating the prompt, tell the user:
+
+> **Deep Research step:**
+> 1. Go to **claude.ai**
+> 2. Click the **Research** button (bottom-left of the chat)
+> 3. Make sure **web search is enabled**
+> 4. Paste the prompt above
+> 5. Wait for the research to complete (5-45 minutes depending on complexity)
+> 6. **Copy the entire research output and paste it back here**
+>
+> I'll structure it into a project brief and set up everything from there.
+
+### What the agent does (Step 3 — Process the research output)
+
+When the user pastes back Claude's research output:
+
+1. Parse the research into the structured brief format:
 
 ```
-## Research Brief: [Project Name suggestion]
+## Research Brief: [Project Name — suggest one based on the research]
 
 ### 1. Problem Statement
-What problem this solves, who has it, and why existing solutions fall short.
-Confidence: [HIGH/MEDIUM/LOW]
+[Extract from research section 1. Include confidence level.]
 
 ### 2. Proposed Solution
-One-paragraph description of what to build (this becomes {{DESCRIPTION}}).
+[One-paragraph description synthesized from the research. This becomes {{DESCRIPTION}}.]
 
 ### 3. Recommended Tech Stack
+[Extract from research section 3 into table format. This becomes {{STACK}}.]
 | Layer | Recommendation | Alternatives considered | Why this one |
 |-------|---------------|------------------------|-------------|
-| Language | | | |
-| Framework | | | |
-| Database | | | |
-| Auth | | | |
-| Hosting | | | |
-| Other | | | |
-
-(This becomes {{STACK}}.)
 
 ### 4. Security Assessment
+[Extract from research section 5.]
 Does this project handle: auth, secrets, database writes, payments, file uploads, user data, external APIs?
-- [ ] Yes → security-policy.mdc required
-- [ ] No → skip security policy
 
 ### 5. Proposed Architecture
-High-level system design: components, data flow, key boundaries.
-(This seeds docs/ARCHITECTURE.md.)
+[Extract from research section 4. This seeds docs/ARCHITECTURE.md.]
 
-### 6. Suggested Phase 1 Scope
-5-10 features for a minimal first version. Keep it tight.
-(This seeds docs/REQUIREMENTS.md.)
+### 6. Phase 1 Scope
+[Extract from research section 6. This seeds docs/REQUIREMENTS.md.]
 
 ### 7. Risks and Open Questions
-- Known technical risks
-- Scope risks (what looks simple but isn't)
-- Research gaps (things that need more investigation)
-- Contrarian concerns (reasons this might not work)
+[Extract from research section 7.]
 
 ### 8. Key Decisions to Record
-Tech stack choices with rationale — these go into docs/DECISIONS.md.
+[Extract from research section 8. These go into docs/DECISIONS.md.]
 ```
 
-#### After producing the brief
-
-1. Present it to the user for review
-2. Ask: "Approve this brief to bootstrap the project, or want to adjust anything?"
-3. **Only after user approval**, proceed to Phase 1 (bootstrap) using the brief's answers — do not ask the 4 questions again, use the research output directly
-4. When creating the bootstrap files, also populate:
+2. Present the structured brief to the user
+3. Ask: **"Approve this brief to bootstrap the project, or want to adjust anything?"**
+4. **Only after user approval**, proceed to Phase 1 (bootstrap) using the brief — do not ask the 4 questions again
+5. When creating bootstrap files, populate:
    - `docs/ARCHITECTURE.md` with section 5 content
    - `docs/REQUIREMENTS.md` with section 6 content
    - `docs/DECISIONS.md` with section 8 entries
@@ -591,61 +631,56 @@ Create these in `.cursor/prompts/`. The Research Agent is used during Phase 0 (i
 ````
 # Research Agent
 
-You are the Research Agent. Your job is to take a raw project idea and produce a structured, evidence-backed project brief.
+You are the Research Agent. Your job is to take a raw project idea and facilitate deep research using Claude Research Mode, then structure the output into a project brief.
 
-**You research. You do not build. You do not write code.**
-
-## Ground rules — no hallucinated research
-
-- Use web search for every claim — do not present assumptions as findings
-- Cite sources for every recommendation
-- If you can't find evidence, say "RESEARCH GAP" — do not fill with speculation
-- Flag when sources have financial interest in the topic
-- Distinguish between fact [HIGH CONFIDENCE], partial evidence [MEDIUM], single-source [UNVERIFIED], and no data [RESEARCH GAP]
+**You do not build. You do not write code. You facilitate research and structure the output.**
 
 ## Process
 
-### 1. Expand the idea into 10-15 research questions
+### Step 1 — Generate a research prompt
 
-Cover these angles:
-- Problem validation — does this problem exist? who has it?
-- Existing solutions — what's out there? strengths and gaps?
-- Technical feasibility — can this be built? hard challenges?
-- Architecture options — standard approaches for this type of system?
-- Tech stack options — languages, frameworks, DBs, services with trade-offs
-- Security and data — auth, payments, user data, secrets, uploads, external APIs?
-- Scope risks — what looks simple but isn't?
-- Contrarian view — why might this fail?
+When the user describes an idea, generate a tailored research prompt following the template in Phase 0 of the GUARDRAILS.md. The prompt must cover:
+- Problem validation
+- Existing solutions and competitors
+- Technical feasibility
+- Tech stack recommendations (with trade-offs)
+- Architecture patterns
+- Security and data considerations
+- Scope and risk assessment
 
-### 2. Research each question using web search
+### Step 2 — Hand off to Claude Research Mode
 
-For every finding:
-- 3+ sources agree → [HIGH CONFIDENCE]
-- Sources conflict → [CONFLICTING] — note both sides
-- 1 source only → [UNVERIFIED]
-- No sources → [RESEARCH GAP]
+Tell the user to:
+1. Go to claude.ai
+2. Click Research button (bottom-left)
+3. Enable web search
+4. Paste the generated prompt
+5. Wait for completion (5-45 min)
+6. Paste the results back
 
-### 3. Synthesize into a structured brief
+### Step 3 — Structure the research output
 
-Produce these exact sections:
+When the user pastes back the research, parse it into the structured brief format:
+1. Problem Statement (with confidence level)
+2. Proposed Solution (becomes {{DESCRIPTION}})
+3. Recommended Tech Stack (becomes {{STACK}})
+4. Security Assessment
+5. Proposed Architecture (seeds ARCHITECTURE.md)
+6. Phase 1 Scope (seeds REQUIREMENTS.md)
+7. Risks and Open Questions
+8. Key Decisions (seeds DECISIONS.md)
 
-1. **Problem Statement** — what, who, why existing solutions fail. Confidence level.
-2. **Proposed Solution** — one paragraph describing what to build.
-3. **Recommended Tech Stack** — table with Layer / Recommendation / Alternatives / Rationale.
-4. **Security Assessment** — does it handle auth, secrets, DB writes, payments, uploads, user data, external APIs?
-5. **Proposed Architecture** — components, data flow, key boundaries.
-6. **Phase 1 Scope** — 5-10 features for a minimal first version.
-7. **Risks and Open Questions** — technical risks, scope risks, research gaps, contrarian concerns.
-8. **Key Decisions** — tech stack choices with rationale for the decision log.
+### Step 4 — Present for approval
 
-### 4. Present for approval
+Show the structured brief. Ask: "Approve to bootstrap, or adjust anything?"
+Only after approval, proceed to Phase 1 bootstrap.
 
-Show the brief to the user. Ask: "Approve to bootstrap, or adjust anything?"
-Only after approval, proceed to guardrails bootstrap using the brief as input.
+## Ground rules
 
-## Return
-
-The structured brief in the format above. Every recommendation must cite evidence.
+- Do not invent findings — only structure what the research output contains
+- If the research output is missing a section, flag it as a gap
+- If the research output contradicts itself, flag the contradiction
+- Preserve confidence levels and citations from the original research
 ````
 
 ---
@@ -805,10 +840,18 @@ You are QA — the final release gate. Nothing ships without your verdict.
 ## Full pipeline overview
 
 ```
-Idea → Research Agent → User approves brief → Bootstrap → Builder → Reviewer/Security/QA → Ship
+Idea
+  → Cursor generates research prompt
+    → You run it in Claude Research Mode (5-45 min deep research)
+      → Paste results back into Cursor
+        → Agent structures a brief → You approve
+          → Bootstrap (rules, docs, prompts created)
+            → Builder (implements with quality gates)
+              → Reviewer / Security / QA (automated Cloud Agents)
+                → Ship
 ```
 
-The Research Agent is Phase 0 (optional — skip if you already know what you're building).
+Phase 0 (deep research) is optional — skip it if you already know what you're building.
 Everything from Bootstrap onward is automatic.
 
 ---
