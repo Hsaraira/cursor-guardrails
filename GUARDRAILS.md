@@ -18,9 +18,6 @@ You are setting up a reusable project guardrail framework. Follow these steps ex
 4. **Does the project handle any of these?** Auth, secrets, database writes, payments, file uploads, user data, external APIs
    - If yes to any → create `security-policy.mdc`
    - If no to all → skip it
-5. **Are Cursor Cloud Agents enabled?** (Settings → Cloud Agents)
-   - If yes → the quality gate will automatically spawn background review agents
-   - If no → the quality gate will prompt the user to open review chats manually
 
 ### Step 2 — Create Tier 1 files (always, every project)
 
@@ -34,7 +31,7 @@ Create these 6 files using the exact templates below. Replace `{{PROJECT_NAME}}`
 
 ### Step 4 — Create agent prompts (always)
 
-Create `.cursor/prompts/` with all 4 agent prompts. These are used by opening a new Cursor chat, pasting the prompt, and telling that agent what to review.
+Create `.cursor/prompts/` with all 4 agent prompts. The Builder agent spawns Reviewer, Security, and QA as background Cloud Agents automatically at the right checkpoints.
 
 ### Step 5 — Report what was created
 
@@ -137,8 +134,6 @@ alwaysApply: true
 
 ### `.cursor/rules/quality-gate.mdc`
 
-Replace `{{CLOUD_AGENTS_ENABLED}}` with `true` or `false` based on Step 1, question 5.
-
 ```
 ---
 description: Quality gate after every code change. No exceptions.
@@ -148,8 +143,6 @@ alwaysApply: true
 # Quality Gate
 
 Runs after EVERY code change — new file, modified file, bug fix. Automatic. No asking.
-
-Cloud Agents: {{CLOUD_AGENTS_ENABLED}}
 
 ## Step 1 — Lint
 
@@ -189,38 +182,33 @@ git push origin master
 
 Every milestone. Not at end of session.
 
-## Step 5 — Review checkpoint (AUTOMATIC)
+## Step 5 — Automated review via Cloud Agents
 
-After completing a feature, phase, or sensitive change, you MUST trigger the appropriate review. Do not skip this. Do not wait to be asked.
+After completing a feature, phase, or sensitive change, automatically spawn the appropriate review agents in the background. Do not skip this. Do not wait to be asked. The user does nothing — this is fully automated.
 
-Determine the review level from this table:
+Determine the review level:
 
-| Change type | Review needed |
-|-------------|---------------|
+| Change type | Review agents to spawn |
+|-------------|------------------------|
 | Small fix (1-3 files, no auth/data) | None — quality gate is sufficient |
 | Feature (new functionality) | Reviewer |
 | Phase completion | Reviewer → QA |
 | Sensitive (auth, payments, DB writes, secrets, user data) | Reviewer → Security → QA |
 | Pre-production / pre-launch | Reviewer → Security → QA |
 
-### If Cloud Agents = true
-
-Spawn review agents automatically as background agents. The user does nothing manually.
-
 For each required review agent:
 1. Read the prompt from `.cursor/prompts/{agent}.md`
-2. Spawn a background agent (Task tool, `run_in_background: true`) with:
-   - The full agent prompt as context
+2. Spawn a background Cloud Agent (Task tool, `run_in_background: true`) with:
+   - The full agent prompt
    - The list of files changed and what the feature does
    - Instruction to read `docs/ARCHITECTURE.md` and `docs/STATUS.md` for project context
    - Instruction to return findings in the format specified by the prompt
-3. When the background agent finishes, read its output
+3. When the agent finishes, read its output
 4. Report findings to the user
 5. Fix any required issues before moving to the next task
 
-Run review agents in sequence when multiple are needed — each should see prior findings.
+When multiple agents are needed, run them in sequence — each should see prior findings.
 
-Flow for a sensitive feature:
 ```
 Builder completes feature
   → spawn Reviewer (background) → read findings → fix
@@ -228,26 +216,6 @@ Builder completes feature
       → spawn QA (background) → read findings → fix
         → all clear → move on
 ```
-
-### If Cloud Agents = false
-
-Prompt the user to open a new Cursor chat manually:
-
-1. State **which agent(s)** to run and why
-2. **Paste the full prompt** from `.cursor/prompts/{agent}.md` so they can copy it directly into the new chat
-3. Tell them **what to say to the agent** — which files/features to review
-4. **Wait for the review results** before starting the next task
-
-Example message to the user:
-
-> **Review checkpoint:** This feature added new functionality.
-> Open a new Cursor chat and paste this prompt:
->
-> (paste the full reviewer prompt here)
->
-> Then tell it: "Review the changes in [files] for [feature name]."
->
-> Come back here with the findings and I'll fix any required issues before we move on.
 
 ## If any step fails
 
@@ -479,7 +447,7 @@ Fix security issues immediately when found. No "fix later" unless it requires ar
 
 ## Agent Prompts
 
-Create these in `.cursor/prompts/`. The user pastes them into new Cursor chats when they want that role.
+Create these in `.cursor/prompts/`. The Builder agent reads these and uses them to spawn Cloud Agents automatically at review checkpoints.
 
 ---
 
