@@ -182,6 +182,37 @@ git push origin master
 
 Every milestone. Not at end of session.
 
+## Step 5 — Review checkpoint (AUTOMATIC)
+
+After completing a feature, phase, or sensitive change, you MUST prompt the user to run the appropriate review agent. Do not skip this. Do not wait to be asked.
+
+Determine the review level from this table:
+
+| Change type | Review needed |
+|-------------|---------------|
+| Small fix (1-3 files, no auth/data) | None — quality gate is sufficient |
+| Feature (new functionality) | Reviewer |
+| Phase completion | Reviewer → QA |
+| Sensitive (auth, payments, DB writes, secrets, user data) | Reviewer → Security → QA |
+| Pre-production / pre-launch | Reviewer → Security → QA |
+
+When review is needed, tell the user:
+
+1. **Which agent(s)** to run and why
+2. **Paste the ready-to-use prompt** from `.cursor/prompts/{agent}.md` so they can copy it directly
+3. **What to tell the agent** — which files/features to review
+4. **Wait for the review** before starting the next task
+
+Example output when a feature is done:
+
+> **Review checkpoint:** This feature added new functionality. Open a new Cursor chat and paste the Reviewer prompt below, then tell it to review [specific files/feature].
+>
+> (paste the full reviewer prompt here)
+>
+> Once the Reviewer returns findings, come back here and I'll address any required fixes before we move on.
+
+If the change is sensitive, repeat for Security and QA in sequence.
+
 ## If any step fails
 
 Stop. Fix it. Do not proceed. Do not commit with a known failure.
