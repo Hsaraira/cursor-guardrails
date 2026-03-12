@@ -384,7 +384,7 @@ For each required review agent:
    - The list of files changed and what the feature does
    - Instruction to read `docs/ARCHITECTURE.md` and `docs/STATUS.md` for project context
    - Instruction to return findings in the format specified by the prompt
-   - **Use a different model than the Builder if possible** — research shows 10-25% narcissistic bias when models judge their own output (specify `model: "fast"` or a different model tier for review agents)
+   - **Use Opus 4.6 for all review agents** — the Builder runs on Sonnet 4.6 (fast, high-volume), so using Opus for review eliminates narcissistic bias (research shows 10-25% self-preference when models judge their own output). Sonnet builds, Opus reviews — different model, better judgment.
 3. When the agent finishes, read its output
 4. Report findings to the user
 5. Fix any required issues
