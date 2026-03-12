@@ -146,10 +146,14 @@ Does this project handle: auth, secrets, database writes, payments, file uploads
 [Extract from research section 8. These go into docs/DECISIONS.md.]
 ```
 
-2. Present the structured brief to the user
-3. Ask: **"Approve this brief to bootstrap the project, or want to adjust anything?"**
-4. **Only after user approval**, proceed to Phase 1 (bootstrap) using the brief — do not ask the 4 questions again
-5. When creating bootstrap files, populate:
+2. **Citation verification warning:** Research shows LLM citation hallucination rates of 17-55%. Before presenting the brief, add this notice:
+
+> **Important:** Claude Research Mode produces high-quality output but may hallucinate citations (17-55% rate across LLM research tools). Before approving this brief, spot-check 3-5 key claims — especially tech stack recommendations and competitor analysis. Click the cited sources and verify they say what the brief claims. If a critical finding has no verifiable source, flag it as [UNVERIFIED] and make decisions accordingly.
+
+3. Present the structured brief to the user
+4. Ask: **"Approve this brief to bootstrap the project, or want to adjust anything?"**
+5. **Only after user approval**, proceed to Phase 1 (bootstrap) using the brief — do not ask the 4 questions again
+6. When creating bootstrap files, populate:
    - `docs/ARCHITECTURE.md` with section 5 content
    - `docs/REQUIREMENTS.md` with section 6 content
    - `docs/DECISIONS.md` with section 8 entries
@@ -245,11 +249,15 @@ alwaysApply: true
 
 ## On session start (MANDATORY)
 
+Load minimal viable context — research shows optimal session preamble is 300-750 tokens (~200-500 words). Do not dump entire project histories. Load only what's needed for the current task.
+
 1. Read `docs/STATUS.md` — know what's done, what's in progress, what's next
-2. Read `docs/ARCHITECTURE.md` — know the system design
+2. Read `docs/ARCHITECTURE.md` — know the system design (skim, don't memorize — re-read relevant sections when needed)
 3. If resuming prior work, read `docs/DECISIONS.md` for context on past choices
 4. Identify what to work on from STATUS.md
 5. Confirm plan with user before writing code
+
+Do NOT read every file in the project at session start. Read only the docs above, then read specific code files as needed during implementation. Context windows degrade with noise — keep the preamble lean.
 
 ## During development
 
@@ -327,6 +335,19 @@ Run `ReadLints` on every file you wrote or modified. Fix every error you introdu
 ### Other languages
 - Whatever the standard validation tool is for that language, run it
 
+## Step 2b — Test integrity check (CRITICAL — agents fabricate tests)
+
+Research shows AI agents commonly fabricate test results: writing assertion-free tests, silently weakening thresholds, deleting failing tests instead of fixing code, and using unconditional skips. After running tests, verify:
+
+- Every test file has meaningful assertions (not just `assert True` or empty test bodies)
+- No tests were deleted or weakened compared to the previous commit
+- No unconditional `skip`, `t.Skip()`, or `pytest.mark.skip` without documented reason
+- No empty catch/except blocks that silently swallow test failures
+- Test count did not decrease without explanation
+- Tests actually exercise the code path they claim to test (not just importing and returning)
+
+If any of these are violated, fix the tests before proceeding. Do not commit tests that give false confidence.
+
 ## Step 3 — Architecture alignment
 
 Does this change still match `docs/ARCHITECTURE.md`?
@@ -363,21 +384,24 @@ For each required review agent:
    - The list of files changed and what the feature does
    - Instruction to read `docs/ARCHITECTURE.md` and `docs/STATUS.md` for project context
    - Instruction to return findings in the format specified by the prompt
+   - **Use a different model than the Builder if possible** — research shows 10-25% narcissistic bias when models judge their own output (specify `model: "fast"` or a different model tier for review agents)
 3. When the agent finishes, read its output
 4. Report findings to the user
 5. Fix any required issues
 6. If findings were critical or moderate, re-run the same review agent to verify fixes are adequate
 7. Only move to the next review agent (or next task) after the current one returns APPROVE / SAFE TO SHIP / SHIP
 
-When multiple agents are needed, run them in sequence — each should see prior findings.
+When multiple agents are needed, run Reviewer and Security in **parallel** (they're independent), then QA last (it checks if prior findings were resolved). Deduplicate overlapping findings before presenting to the user.
 
 ```
 Builder completes feature
-  → spawn Reviewer (background) → read findings → fix
-    → spawn Security (background) → read findings → fix
-      → spawn QA (background) → read findings → fix
+  → spawn Reviewer + Security in parallel (background)
+    → read both outputs → deduplicate overlapping findings → fix all issues
+      → spawn QA (background, sees prior findings) → read findings → fix
         → all clear → move on
 ```
+
+If only Reviewer is needed (no sensitive change), run it alone. QA always runs last when required.
 
 ## If any step fails
 
@@ -424,6 +448,16 @@ A shortcut is any time you produce something incomplete and move on.
 - Generating data, metrics, or statistics that weren't computed or observed
 - Assuming what an API returns without checking documentation or actual responses
 - Stating "this works" or "this is correct" without evidence (test output, lint output, build output)
+
+## Banned test fabrication shortcuts
+
+- Writing assertion-free tests that always pass (e.g., `assert True`, empty test bodies)
+- Deleting or commenting out failing tests instead of fixing the underlying code
+- Weakening test thresholds to make failures pass (e.g., changing `assertEqual` to `assertAlmostEqual` without justification)
+- Using unconditional `skip`, `t.Skip()`, or `pytest.mark.skip` to hide failures
+- Writing tests that import code but don't actually exercise it
+- Suppressing test errors with empty catch/except blocks
+- Reducing test count without explanation
 
 ## Banned process shortcuts
 
@@ -588,6 +622,34 @@ Fix security issues immediately when found. No "fix later" unless it requires ar
 - [ ] Input validated server-side
 - [ ] Error responses don't leak internal details
 ```
+
+---
+
+### `.cursor/hooks.json` (optional — enforcement layer)
+
+Research confirms that Cursor rules are guidance (honor system) while hooks are programmatic enforcement. Hooks run automatically after file edits and shell commands. Add this if you want hard enforcement beyond rules. Note: Hooks are in beta (Cursor v1.7+) and may have stability issues.
+
+```
+{
+  "hooks": [
+    {
+      "name": "lint-on-save",
+      "trigger": "afterFileEdit",
+      "command": "npx eslint --fix {{filePath}} || python -m flake8 {{filePath}}",
+      "description": "Auto-lint every file after edit"
+    },
+    {
+      "name": "block-env-commit",
+      "trigger": "beforeShellExecution",
+      "pattern": "git add.*\\.env",
+      "action": "block",
+      "message": "Blocked: never commit .env files"
+    }
+  ]
+}
+```
+
+Customize hooks based on your stack. This is the enforcement layer that rules alone cannot provide.
 
 ---
 
@@ -778,7 +840,19 @@ You are the Security reviewer. Your job is to find security vulnerabilities, tru
 - If you are unsure whether something is exploitable, say so — do not present uncertainty as a confirmed vulnerability
 - Do not invent security issues that sound plausible but aren't backed by what you read in the code
 
-## Focus areas
+## Step 1 — Run SAST tools first (if available)
+
+Research shows hybrid SAST+LLM achieves 89.5% precision vs 65.5% LLM-only — a 91% reduction in false positives. Before doing your LLM review, run any available static analysis tools:
+
+- **JavaScript/TypeScript:** `npx eslint --ext .ts,.tsx . --rule '{no-eval: error}'` or Semgrep
+- **Python:** `bandit -r src/` or `semgrep --config=auto`
+- **General:** `semgrep --config=auto` (if installed)
+
+Include the SAST output in your review. Use it to confirm or dismiss your LLM findings. If no SAST tools are available, proceed with LLM-only review but note this limitation in your report.
+
+## Step 2 — LLM security review
+
+### Focus areas
 
 - Authentication — is auth verified on every protected route?
 - Authorization — can users access or modify other users' data?
@@ -793,10 +867,12 @@ You are the Security reviewer. Your job is to find security vulnerabilities, tru
 
 ## Return
 
-1. Vulnerabilities by severity (critical / high / medium / low)
-2. Affected files and exact issue
-3. Recommended fix for each
-4. Verdict: **SAFE TO SHIP** or **BLOCK — fix required**
+1. SAST tool output summary (if tools were run)
+2. Vulnerabilities by severity (critical / high / medium / low)
+3. Affected files and exact issue
+4. For each finding: confirmed by SAST, found by LLM only, or conflicting
+5. Recommended fix for each
+6. Verdict: **SAFE TO SHIP** or **BLOCK — fix required**
 ```
 
 ---
